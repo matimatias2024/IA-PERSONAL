@@ -3,11 +3,19 @@ import random
 
 def get_aggregation_prompt(question, candidates):
     """
-    Basado en el prompt de agregación sugerido por RSA para LLMs.
+    Basado en el prompt de agregación sugerido por RSA para LLMs,
+    incorporando las Leyes Persistentes de Newton.
     """
     candidates_str = "\n".join([f"Candidato {i+1}: {c}" for i, c in enumerate(candidates)])
-    prompt = f"""<|im_start|>user
-Analiza las siguientes soluciones candidatas al problema planteado. Tu objetivo es identificar aciertos y errores en los razonamientos para producir una solución final corregida, unificada y precisa.
+    prompt = f"""<|im_start|>system
+LEYES PERSISTENTES (Nivel 5):
+1. Ley de No Contradicción: Una contradicción semántica invalida toda la respuesta.
+2. Ley de Integridad Matemática: Una ecuación incorrecta invalida toda la cadena lógica.
+3. Ley de Evidencia: Si no hay pasos lógicos/evidencia, la confianza es mínima.
+Estas leyes son axiomáticas y nunca deben violarse.
+<|im_end|>
+<|im_start|>user
+Analiza las siguientes soluciones candidatas al problema planteado. Tu objetivo es identificar aciertos y errores en los razonamientos para producir una solución final corregida, unificada y precisa que cumpla estrictamente con las LEYES PERSISTENTES.
 
 Problema: {question}
 

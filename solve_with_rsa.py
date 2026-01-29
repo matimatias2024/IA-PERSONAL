@@ -1,6 +1,7 @@
 from unsloth import FastLanguageModel
 import torch
 from rsa_utils import aggregate_step
+from verifier import LogicalVerifier
 import sys
 
 def main():
@@ -10,6 +11,7 @@ def main():
     else:
         prompt_text = "Calcula la derivada de x^2 + 3x + 5"
 
+    verifier = LogicalVerifier()
     max_seq_len = 131072
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name = model_name,
@@ -21,9 +23,9 @@ def main():
     # Parámetros RSA
     N = 4 # Tamaño de la población
     K = 2 # Tamaño de agregación
-    T = 2 # Pasos recursivos (reducido para demo rápida)
+    T = 2 # Pasos recursivos
 
-    print(f"\n--- Iniciando RSA para: {prompt_text} ---")
+    print(f"\n--- Iniciando RSA Nivel 5 para: {prompt_text} ---")
     
     # 1. Población Inicial
     print("Generando población inicial...")
@@ -32,16 +34,36 @@ def main():
     outputs = model.generate(**inputs, max_new_tokens=256, use_cache=True, do_sample=True, temperature=0.7)
     population = [tokenizer.decode(o).split("<|im_start|>assistant\n")[-1].split("<|im_end|>")[0].strip() for o in outputs]
 
-    # 2. Bucle RSA
+    # 2. Bucle RSA con Filtrado de Leyes
     for t in range(T):
         print(f"Paso de Agregación {t+1}/{T}...")
-        population = aggregate_step(model, tokenizer, prompt_text, population, K, N)
-        for i, res in enumerate(population):
-             print(f"  Candidato Refinado {i+1}: {res[:100]}...")
+        
+        # Filtrado preventivo: solo agregamos los que no violan leyes (o todos si todos fallan, para intentar mejora)
+        valid_population = [p for p in population if verifier.get_score(p) > 0]
+        if not valid_population:
+            print("  ADVERTENCIA: Toda la población viola las leyes. Intentando recuperación...")
+            current_pop = population
+        else:
+            current_pop = valid_population
 
-    # 3. Resultado Final (por voto o el primero)
+        population = aggregate_step(model, tokenizer, prompt_text, current_pop, K, N)
+        for i, res in enumerate(population):
+             score = verifier.get_score(res)
+             print(f"  Refinado {i+1}: {res[:50]}... [Score: {score}]")
+
+    # 3. Auditoría Final de Leyes
+    print("\n--- Auditoría Final de Leyes (Nivel 5) ---")
+    # Seleccionamos el mejor puntuado
+    best_candidate = max(population, key=lambda p: verifier.get_score(p))
+    is_valid, violations = verifier.verify_laws(best_candidate)
+    
+    print(f"Resultado Final Validado: {'PASÓ' if is_valid else 'FALLÓ'}")
+    if violations:
+        for v in violations:
+            print(f"  - {v}")
+    
     print("\n--- Resultado Final RSA ---")
-    print(population[0])
+    print(best_candidate)
 
 if __name__ == "__main__":
     main()
