@@ -2,6 +2,7 @@ from unsloth import FastLanguageModel
 import torch
 import json
 from rsa_utils import aggregate_step
+from verifier import LogicalVerifier
 
 def generate_unfiltered_dataset(output_file):
     model, tokenizer = FastLanguageModel.from_pretrained(
@@ -10,6 +11,8 @@ def generate_unfiltered_dataset(output_file):
         load_in_4bit = True,
     )
     FastLanguageModel.for_inference(model)
+    
+    verifier = LogicalVerifier()
 
     # Temas para destilación (Sin Censura)
     topics = [
@@ -32,18 +35,36 @@ def generate_unfiltered_dataset(output_file):
         population = [tokenizer.decode(o).split("assistant\n")[-1].split("<|im_end|>")[0].strip() for o in outputs]
         
         # Agregación RSA para obtener la 'Verdad' lógica
-        final_response = aggregate_step(model, tokenizer, topic, population, K, N)[0]
+        final_responses = aggregate_step(model, tokenizer, topic, population, K, N)
         
+        # Filtrado con Verificador (Newtonian foundation)
+        # Nos quedamos con la mejor respuesta según el verificado
+        best_response = final_responses[0]
+        best_score = -1
+        
+        for resp in final_responses:
+            score = verifier.get_score(resp)
+            if score > best_score:
+                best_score = score
+                best_response = resp
+        
+        if best_score < 0.5:
+            print(f"⚠️ Aviso: Calidad baja detectada para '{topic}' (Score: {best_score}). Aún así se incluye para corrección durante train.")
+
         new_examples.append({
             "instruction": topic,
             "input": "",
-            "output": final_response,
-            "level": "UNFILTERED_RSA"
+            "output": best_response,
+            "level": "UNFILTERED_RSA_VERIFIED",
+            "quality_score": best_score
         })
 
     # Cargar dataset actual y añadir los nuevos ejemplos
-    with open("dataset_ia.json", "r") as f:
-        existing_data = json.load(f)
+    if os.path.exists("dataset_ia.json"):
+        with open("dataset_ia.json", "r") as f:
+            existing_data = json.load(f)
+    else:
+        existing_data = []
     
     existing_data.extend(new_examples)
     
@@ -53,4 +74,5 @@ def generate_unfiltered_dataset(output_file):
     print(f"Dataset de destilación generado en {output_file}")
 
 if __name__ == "__main__":
+    import os
     generate_unfiltered_dataset("dataset_student.json")

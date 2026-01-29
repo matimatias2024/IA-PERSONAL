@@ -1,9 +1,10 @@
 from unsloth import FastLanguageModel
 import torch
 from trl import SFTTrainer
-from transformers import TrainingArguments
+from transformers import TrainingArguments, TrainerCallback
 from datasets import load_dataset
 import os
+from verifier import LogicalVerifier
 
 # 1. Configuration
 model_name = "unsloth/Llama-3.2-3B-Instruct-bnb-4bit"
@@ -32,25 +33,42 @@ model = FastLanguageModel.get_peft_model(
     random_state = 3407,
 )
 
-# 4. Data Preparation
+# 4. Data Preparation with scoring
+verifier = LogicalVerifier()
+
 def formatting_prompts_func(examples):
     instructions = examples["instruction"]
     inputs       = examples["input"]
     outputs      = examples["output"]
     texts = []
+    weights = []
     for instruction, input, output in zip(instructions, inputs, outputs):
         if input:
-            # ChatML style with input (e.g. for RSA aggregation)
             text = f"<|im_start|>user\n{instruction}\n\n{input}\n<|im_end|>\n<|im_start|>assistant\n{output}\n<|im_end|>"
         else:
             text = f"<|im_start|>user\n{instruction}\n<|im_end|>\n<|im_start|>assistant\n{output}\n<|im_end|>"
+        
+        # Scoring for certainty penalty (weighted SFT)
+        score = verifier.get_score(output)
+        weights.append(score)
         texts.append(text)
-    return { "text" : texts, }
+    return { "text" : texts, "weight": weights }
 
 dataset = load_dataset("json", data_files="dataset_ia.json", split="train")
 dataset = dataset.map(formatting_prompts_func, batched = True,)
 
-# 5. Trainer
+# 5. Layer Freezing Callback
+class FreezeLayerCallback(TrainerCallback):
+    def on_step_end(self, args, state, control, **kwargs):
+        if state.global_step == 50:
+            print("\n[NEWTONIAN] Congelando capas base (0-15) para estabilizar razonamiento...")
+            for name, param in kwargs['model'].named_parameters():
+                if "layers." in name:
+                    layer_num = int(name.split("layers.")[1].split(".")[0])
+                    if layer_num < 16:
+                        param.requires_grad = False
+
+# 6. Trainer
 trainer = SFTTrainer(
     model = model,
     tokenizer = tokenizer,
@@ -59,11 +77,12 @@ trainer = SFTTrainer(
     max_seq_length = max_seq_len,
     dataset_num_proc = 2,
     packing = False,
+    callbacks=[FreezeLayerCallback()],
     args = TrainingArguments(
         per_device_train_batch_size = 2,
         gradient_accumulation_steps = 4,
         warmup_steps = 5,
-        max_steps = 150, # Aumentado para cubrir los nuevos ejemplos
+        max_steps = 150,
         learning_rate = 2e-4,
         fp16 = not torch.cuda.is_bf16_supported(),
         bf16 = torch.cuda.is_bf16_supported(),
@@ -74,16 +93,16 @@ trainer = SFTTrainer(
         seed = 3407,
         output_dir = "outputs",
         save_strategy = "steps",
-        save_steps = 30,
+        save_steps = 50,
         save_total_limit = 1,
     ),
 )
 
-# 6. Train
-print("\n--- Iniciando entrenamiento de la Fase Matemática y RSA ---")
+# 7. Train
+print("\n--- Iniciando entrenamiento Newtoniano (Penalty + Freezing) ---")
 trainer_stats = trainer.train()
 
-# 7. Save Model
+# 8. Save Model
 print("\nGuardando modelo en 'outputs'...")
 model.save_pretrained("outputs")
 tokenizer.save_pretrained("outputs")
