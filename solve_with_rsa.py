@@ -10,7 +10,7 @@ def main():
     else:
         prompt_text = "Calcula la derivada de x^2 + 3x + 5"
 
-    max_seq_len = 4096
+    max_seq_len = 131072
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name = model_name,
         max_seq_length = max_seq_len,

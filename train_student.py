@@ -6,8 +6,8 @@ from datasets import load_dataset
 import os
 
 # 1. Configuration
-model_name = "unsloth/Mistral-Nemo-Base-2407-bnb-4bit"
-max_seq_len = 32768 
+model_name = "unsloth/Llama-3.2-3B-Instruct-bnb-4bit"
+max_seq_len = 16384 
 dtype = None 
 load_in_4bit = True
 
@@ -63,7 +63,7 @@ trainer = SFTTrainer(
         per_device_train_batch_size = 2,
         gradient_accumulation_steps = 4,
         warmup_steps = 5,
-        max_steps = 100, # Aumentado para cubrir los nuevos ejemplos
+        max_steps = 150, # Aumentado para cubrir los nuevos ejemplos
         learning_rate = 2e-4,
         fp16 = not torch.cuda.is_bf16_supported(),
         bf16 = torch.cuda.is_bf16_supported(),
