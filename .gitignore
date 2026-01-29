@@ -1,0 +1,6 @@
+venv/
+outputs/
+unsloth_compiled_cache/
+rclone_bin
+*.tar.zst
+train.log

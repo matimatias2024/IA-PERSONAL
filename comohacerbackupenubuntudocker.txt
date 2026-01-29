@@ -1,0 +1,144 @@
+
+
+# 🧰 BACKUP DE `/root` → GOOGLE DRIVE (con rclone)
+
+## 🥇 PASO 1 — Instalar rclone
+
+En la instancia:
+
+```bash
+apt update
+apt install -y rclone
+```
+
+Comprueba:
+
+```bash
+rclone version
+```
+
+---
+
+## 🥈 PASO 2 — Configurar Google Drive (una sola vez)
+
+Ejecuta:
+
+```bash
+rclone config
+```
+
+Sigue exactamente este flujo:
+
+1. `n` → new remote
+2. Nombre: `gdrive`
+3. Tipo: **drive**
+4. Client ID → ENTER
+5. Client Secret → ENTER
+6. Scope → `1` (full access)
+7. Advanced config → `n`
+8. Use auto config → `y`
+
+👉 Se abrirá una URL
+👉 Inicia sesión en tu Google
+👉 Copia el código
+👉 Pégalo en la terminal
+
+Cuando termine:
+
+```bash
+q
+```
+
+---
+
+## 🥉 PASO 3 — Crear el backup comprimido
+
+```bash
+tar --zstd \
+  --exclude=/root/.cache \
+  -cvf /root/backup-root-$(date +%F).tar.zst \
+  /root
+```
+
+---
+
+## 🚀 PASO 4 — Subir a Google Drive
+
+```bash
+rclone copy /root/backup-root-*.tar.zst gdrive:vast-backups
+```
+
+📁 Se crea la carpeta `vast-backups` en tu Drive.
+
+Verifica:
+
+```bash
+rclone ls gdrive:vast-backups
+```
+
+---
+
+# ♻️ RESTAURAR DESDE GOOGLE DRIVE
+
+## 🥇 Descargar backup
+
+```bash
+rclone copy gdrive:vast-backups/backup-root-2026-01-29.tar.zst /root
+```
+
+---
+
+## 🥈 Restaurar
+
+⚠️ Esto sobrescribe `/root`.
+
+```bash
+tar --zstd -xvf /root/backup-root-2026-01-29.tar.zst -C /
+```
+
+Cierra sesión o reinicia.
+
+---
+
+# 🔥 OPCIONAL — Script 1-click (muy recomendado)
+
+Crea `/root/backup_to_drive.sh`:
+
+```bash
+#!/bin/bash
+set -e
+
+DATE=$(date +%F)
+BACKUP="/root/backup-root-$DATE.tar.zst"
+
+tar --zstd \
+  --exclude=/root/.cache \
+  -cf $BACKUP /root
+
+rclone copy $BACKUP gdrive:vast-backups
+rm $BACKUP
+
+echo "✅ Backup completado y subido a Google Drive"
+```
+
+Hazlo ejecutable:
+
+```bash
+chmod +x /root/backup_to_drive.sh
+```
+
+Ejecutar:
+
+```bash
+./backup_to_drive.sh
+```
+
+---
+
+# 🧠 Buenas prácticas
+
+* Haz backup **antes de apagar la instancia**
+* Mantén **2–3 backups** en Drive
+* No subas `.cache` ni `.Trash`
+* Drive aguanta bien archivos grandes
+
