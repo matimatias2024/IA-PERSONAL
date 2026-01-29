@@ -5,14 +5,15 @@ from verifier import LogicalVerifier
 import sys
 
 def main():
-    model_name = "outputs" # Usaremos el modelo después del fine-tuning
+    model_name = "outputs" 
     if len(sys.argv) > 1:
         prompt_text = sys.argv[1]
     else:
-        prompt_text = "Calcula la derivada de x^2 + 3x + 5"
+        # Prompt de prueba complejo
+        prompt_text = "Si un tren sale de A a 100km/h y otro de B a 120km/h hacia A, con una distancia de 440km, ¿en qué punto exacto y cuándo se cruzan? Muestra todos los pasos lógicos."
 
     verifier = LogicalVerifier()
-    max_seq_len = 131072
+    max_seq_len = 32768
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name = model_name,
         max_seq_length = max_seq_len,
@@ -20,40 +21,44 @@ def main():
     )
     FastLanguageModel.for_inference(model)
 
-    # Parámetros RSA
-    N = 4 # Tamaño de la población
-    K = 2 # Tamaño de agregación
-    T = 2 # Pasos recursivos
+    # Parámetros RSA Nivel 5
+    N = 4 # Población
+    K = 2 # Agregación
+    T = 2 # Pasos RSA
+    RECURSIVE_AUDIT = True # Habilitamos auto-auditoría recursiva limitada
 
-    print(f"\n--- Iniciando RSA Nivel 5 para: {prompt_text} ---")
+    print(f"\n--- Iniciando RSA Nivel 5 + Audit para: {prompt_text} ---")
     
     # 1. Población Inicial
     print("Generando población inicial...")
-    initial_prompt = f"<|im_start|>user\n{prompt_text}\n<|im_end|>\n<|im_start|>assistant\n"
+    # Usamos el prompt base pero pidiendo el formato de Nivel 5
+    initial_prompt = f"""<|im_start|>user
+{prompt_text}
+Recuerda aplicar la Ley de Conservación del Razonamiento y el formato <thought>, <self_critique>, Solución Final.
+<|im_end|>
+<|im_start|>assistant
+"""
     inputs = tokenizer([initial_prompt] * N, return_tensors="pt").to("cuda")
-    outputs = model.generate(**inputs, max_new_tokens=256, use_cache=True, do_sample=True, temperature=0.7)
+    outputs = model.generate(**inputs, max_new_tokens=512, use_cache=True, do_sample=True, temperature=0.7)
     population = [tokenizer.decode(o).split("<|im_start|>assistant\n")[-1].split("<|im_end|>")[0].strip() for o in outputs]
 
-    # 2. Bucle RSA con Filtrado de Leyes
+    # 2. Bucle RSA con Audit
     for t in range(T):
-        print(f"Paso de Agregación {t+1}/{T}...")
+        print(f"Paso de Agregación y Auditoría {t+1}/{T}...")
         
-        # Filtrado preventivo: solo agregamos los que no violan leyes (o todos si todos fallan, para intentar mejora)
-        valid_population = [p for p in population if verifier.get_score(p) > 0]
-        if not valid_population:
-            print("  ADVERTENCIA: Toda la población viola las leyes. Intentando recuperación...")
-            current_pop = population
-        else:
-            current_pop = valid_population
-
-        population = aggregate_step(model, tokenizer, prompt_text, current_pop, K, N)
+        # RSA realiza la agregación y el audit recursivo si se habilita
+        population = aggregate_step(model, tokenizer, prompt_text, population, K, N, recursive_audit=RECURSIVE_AUDIT)
+        
         for i, res in enumerate(population):
              score = verifier.get_score(res)
-             print(f"  Refinado {i+1}: {res[:50]}... [Score: {score}]")
+             # Extraemos un pedazo del self_critique si existe
+             critique_snippet = "No critique"
+             if "<self_critique>" in res:
+                 critique_snippet = res.split("<self_critique>")[-1].split("</self_critique>")[0][:50].strip() + "..."
+             print(f"  Candidato {i+1} [Score: {score}] | Critique: {critique_snippet}")
 
-    # 3. Auditoría Final de Leyes
-    print("\n--- Auditoría Final de Leyes (Nivel 5) ---")
-    # Seleccionamos el mejor puntuado
+    # 3. Verificación Final
+    print("\n--- Selección y Validación Final ---")
     best_candidate = max(population, key=lambda p: verifier.get_score(p))
     is_valid, violations = verifier.verify_laws(best_candidate)
     
@@ -62,7 +67,7 @@ def main():
         for v in violations:
             print(f"  - {v}")
     
-    print("\n--- Resultado Final RSA ---")
+    print("\n--- Resultado Final RSA (Nivel 5) ---")
     print(best_candidate)
 
 if __name__ == "__main__":
