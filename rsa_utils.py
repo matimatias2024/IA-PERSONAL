@@ -66,16 +66,23 @@ def aggregate_step(model, tokenizer, question, population, k, n, recursive_audit
         if recursive_audit:
             audit_prompt = f"""<|im_start|>system
 {lm.get_laws_prompt()}
-Como Juez, revisa tu sentencia. Si hay un mínimo error lógico o matemático, corrígelo ahora.
+Eres el AUDITOR DE NIVEL 5. Revisa la sentencia previa. 
+Si encuentras errores matemáticos o contradicciones, corrígelos manteniendo la estructura <thought>, <self_critique>, Solución Final.
+Si la sentencia es correcta y NO requiere cambios, repite exactamente la misma sentencia palabra por palabra. No emitas comentarios sobre el proceso.
 <|im_end|>
 <|im_start|>user
-Sentencia previa: {response}
+Sentencia previa a auditar:
+{response}
 <|im_end|>
 <|im_start|>assistant
 """
             inputs = tokenizer([audit_prompt], return_tensors="pt").to("cuda")
             outputs = model.generate(**inputs, max_new_tokens=1024, use_cache=True)
-            response = tokenizer.decode(outputs[0]).split("<|im_start|>assistant\n")[-1].split("<|im_end|>")[0].strip()
+            audited_response = tokenizer.decode(outputs[0]).split("<|im_start|>assistant")[-1].split("<|im_end|>")[0].strip()
+            
+            # Simple heuristic: if the audited response is much shorter or seems like a meta-comment, keep the original
+            if len(audited_response) > len(response) * 0.5 and "Silencio" not in audited_response:
+                response = audited_response
 
         new_population.append(response)
         

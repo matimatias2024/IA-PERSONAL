@@ -113,7 +113,16 @@ Usa el formato: <thought>, <self_critique>, Solución Final.
 """
         inputs = tokenizer([initial_prompt] * N, return_tensors="pt").to("cuda")
         outputs = model.generate(**inputs, max_new_tokens=1024, use_cache=True, do_sample=True, temperature=0.7)
-        population = [tokenizer.decode(o).split("<|im_start|>assistant")[-1].strip().split("\n", 1)[-1] if "<|im_start|>assistant\n" in tokenizer.decode(outputs[0]) else tokenizer.decode(outputs[0]).split("<|im_start|>assistant")[-1].split("<|im_end|>")[0].strip() for o in outputs]
+                # Decoding each candidate independently
+        population = []
+        for o in outputs:
+            decoded = tokenizer.decode(o)
+            if "<|im_start|>assistant" in decoded:
+                res = decoded.split("<|im_start|>assistant")[-1].split("<|im_end|>")[0].strip()
+                if res.startswith("\n"): res = res[1:].strip()
+                population.append(res)
+            else:
+                population.append(decoded.strip())
 
         population = aggregate_step(model, tokenizer, user_input, population, K, N, recursive_audit=True)
         best_candidate = max(population, key=lambda p: verifier.get_score(p))
