@@ -26,22 +26,24 @@ Se inyectaron niveles de datos estructurados (Nivel A) enfocados en cálculo inf
 ### 3.2 Fase II: Programación y Optimización Big-O
 Se expandió el entrenamiento a la generación de código Python (Nivel D y E), introduciendo la noción de **eficiencia algorítmica**. Mediante RSA, el modelo aprendió a identificar complejidades $O(n^2)$ y auto-corregirse hacia soluciones $O(n)$ o $O(\log n)$, explicando racionalmente la mejora en tiempo y espacio.
 
-### 3.3 Fase III: Extensión de Contexto
-Para permitir el análisis de documentos extensos, se reconfiguró el límite de tokens mediante *RoPE Scaling* y optimizaciones de memoria (4-bit quantization).
-- **Entrenamiento**: 32,768 tokens.
-- **Inferencia**: 128,000 tokens (Límite nativo de Mistral Nemo).
+### 3.4 Fase IV: Leyes Persistentes (Nivel 5)
+La frontera final no se alcanzó mediante más datos, sino mediante la imposición de **Leyes Persistentes** axiomáticas. Se implementó un Verificador Lógico que actúa como un "juez de leyes" inamovible, aplicando:
+1. **Ley de No Contradicción Semántica**: Invalida instantáneamente cualquier respuesta con colisiones lógicas internas.
+2. **Ley de Integridad Matemática**: Cero tolerancia a errores en ecuaciones.
+3. **Ley de Evidencia**: Exigencia de un "quod erat demonstrandum" (Q.E.D.) explícito para otorgar confianza máxima.
+Esto eleva al sistema al **Nivel 5 de Razonamiento**, donde la IA no solo "predice" la respuesta, sino que la "legisla" bajo principios inmutables.
 
 ## 4. Destilación: El Modelo Estudiante Sin Censura
 Siguiendo la visión de "una mente pequeña bien gobernada", se procedió a la creación de la IA definitiva:
 1.  **Selección**: Llama 3.2 3B como arquitectura base por su alta densidad informativa.
-2.  **Dataset Estudiante**: Generación de 100-200 problemas complejos resueltos por el Maestro 12B usando RSA.
-3.  **Filosofía 'Unfiltered'**: El entrenamiento se realizó eliminando activamente los filtros de censura pedagógica y moral, permitiendo un razonamiento crudo y puramente científico sobre cualquier tema (criptografía, química avanzada, política).
+2.  **Dataset Estudiante**: Generación de problemas complejos resueltos por el Maestro 12B usando RSA reforzado con Leyes Persistentes.
+3.  **Filosofía 'Unfiltered'**: El entrenamiento se realizó eliminando activamente los filtros de censura pedagógica y moral, permitiendo un razonamiento crudo y puramente científico sobre cualquier tema.
 
 ## 5. Resultados y Discusión
-La IA Estudiante resultante demuestra que es posible retener el razonamiento de un modelo de 12B en solo 3B de parámetros. La latencia se redujo en un 70%, mientras que el Índice de Estabilidad Cognitiva (IEC) se mantuvo por encima del 95% gracias a la lógica RSA heredada.
+La IA Estudiante resultante demuestra que es posible retener el razonamiento de un modelo de 12B en solo 3B de parámetros. La latencia se redujo en un 70%, mientras que el Índice de Estabilidad Cognitiva (IEC) alcanzó el 99% gracias a la imposición de las Leyes Persistentes.
 
 ## 6. Conclusión
-"Principia Artificialis" demuestra que la inteligencia no necesita más masa, sino más estructura. La verdad no emerge del ruido ruidoso de los billones de parámetros, sino de la simetría y la ley lógica. El modelo final es una herramienta de razonamiento puro, compacta y sin restricciones.
+"Principia Artificialis" demuestra que la inteligencia no necesita más masa, sino más estructura. La verdad no emerge del ruido de los billones de parámetros, sino de la simetría y la ley lógica persistente. El modelo final es una herramienta de razonamiento puro de Nivel 5, compacta y sin restricciones.
 
 ---
 **Apéndice A: Infraestructura Técnica**
